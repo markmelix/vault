@@ -1,11 +1,11 @@
 [package]
-name = "vault-backend"
+name = "vault_backend"
 version = "0.1.0"
 authors = ["Mark Meliksetyan <markmelix@gmail.com>"]
 edition = "2018"
 
 [lib]
-name = "vault-backend"
+name = "vault_backend"
 crate-type = ["cdylib"]
 
 [dependencies.cpython]
