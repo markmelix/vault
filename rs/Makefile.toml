@@ -1,6 +1,10 @@
-[tasks.build-relase]
+[tasks.build-release]
 command = "cargo"
 args = ["build", "--release"]
+
+[tasks.output-move-release]
+command = "cp"
+args = ["target/release/libvault.so", "../py/vault.so"]
 
 [tasks.build]
 command = "cargo"
@@ -14,4 +18,4 @@ args = ["target/release/libvault.so", "vault.so"]
 dependencies = ["build", "output-move"]
 
 [tasks.release]
-dependencies = ["build-release", "output-move"]
+dependencies = ["build-release", "output-move-release"]
