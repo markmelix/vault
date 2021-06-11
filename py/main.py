@@ -32,13 +32,16 @@ def new_file_menu(stdscr):
     y_new_file = h // 2 - 2
     while True:
         stdscr.addstr(y_new_file, x_new_file, "Enter a new file name:")
-        new_filename = stdscr.getstr(y_new_file + 1, x_new_file)
+        new_filename = stdscr.getstr(y_new_file + 1, x_new_file).decode("utf-8")
         if new_filename == '':
             stdscr.addstr(y_new_file + 2, x_new_file, "You didn't enter a file name!")
-            time.sleep(3)
+            stdscr.refresh()
+            time.sleep(1.5)
             stdscr.clear()
             continue
         else:
+            stdscr.addstr(y_new_file + 3, x_new_file, "{} - this is new file name".format(new_filename))
+            stdscr.getch()
             break
 
     stdscr.refresh()
