@@ -1,8 +1,9 @@
 from curses import *
 import time
+import os
 
 parts_of_start_menu = ["Existing storage file", "New storage file", "Exit"]
-parts_of_change_name_menu = ["Leave the name", "Change the name"]
+parts_of_change_name_menu = ["Leave the path", "Change the path"]
 
 
 # Making start menu
@@ -24,20 +25,19 @@ def start_menu(stdscr, selected_row_idx):
     stdscr.addstr(y, x, "VAULT", A_UNDERLINE)
 
 
-# Menu for creating new user
+# Menu for creating new file
 def new_file_menu(stdscr):
-    stdscr.clear()
-    echo()
     h, w = stdscr.getmaxyx()
-    x_new_file = w // 2 - 10
-    y_new_file = h // 2 - 2
+    x_file = w // 2 - 10
+    y_file = h // 2 - 2
+    echo()
     while True:
         stdscr.clear()
-        stdscr.addstr(y_new_file, x_new_file, "Enter a new file name:")
-        new_filename = stdscr.getstr(y_new_file + 1, x_new_file).decode("utf-8")
+        stdscr.addstr(y_file, x_file, "Enter the relative path of the new file(including name of the file):")
+        new_file = stdscr.getstr(y_file + 1, x_file).decode("utf-8")
         # If the user left a field empty
-        if new_filename == '':
-            stdscr.addstr(y_new_file + 2, x_new_file, "You didn't enter a file name!")
+        if new_file == '':
+            stdscr.addstr(y_file + 2, x_file, "You didn't enter the file path!")
             stdscr.refresh()
             time.sleep(1)
             stdscr.clear()
@@ -45,8 +45,8 @@ def new_file_menu(stdscr):
         else:
             stdscr.clear()
             selected_row_idx = 0
-            stdscr.addstr(h // 2 - len(parts_of_change_name_menu) // 2 - 2, w // 2 - len("Name of a new file is {}. Would you like to change it?".format(new_filename)) // 2, "Name of a new file is {}. Would you like to change it?".format(new_filename))
-            # Leave or change the name of a new file
+            stdscr.addstr(h // 2 - len(parts_of_change_name_menu) // 2 - 2, w // 2 - len("New file path is {}. Would you like to change it?".format(new_file)) // 2, "New file path is {}. Would you like to change it?".format(new_file))
+            # Leave or change the path of a new file
             while True:
                 for idx, row in enumerate(parts_of_change_name_menu):
                     x_save_name = w // 2 - len(row) // 2
@@ -62,23 +62,53 @@ def new_file_menu(stdscr):
                 elif key == KEY_DOWN and selected_row_idx < len(parts_of_change_name_menu) - 1:
                     selected_row_idx += 1
                 elif key in [10, 13]:
-                    if parts_of_change_name_menu[selected_row_idx] == "Leave the name":
+                    if parts_of_change_name_menu[selected_row_idx] == "Leave the path":
                         stdscr.clear()
-                        stdscr.addstr(y_new_file + 2, x_new_file, "The name is saved. Name of the new file is {}.".format(new_filename))
+                        stdscr.addstr(h // 2 - len(parts_of_change_name_menu) // 2 - 2, w // 2 - len("The path is saved. New file path is {}.".format(new_file)) // 2, "The path is saved. New file path is {}.".format(new_file))
                         stdscr.refresh()
                         # Is the name of a new file saved or not
-                        saving_the_name = 1
+                        saving_the_path = 1
                         time.sleep(1)
                         break
-                    elif parts_of_change_name_menu[selected_row_idx] == "Change the name":
-                        saving_the_name = 0
+                    elif parts_of_change_name_menu[selected_row_idx] == "Change the path":
+                        saving_the_path = 0
                         break
-            if saving_the_name == 1:
+            if saving_the_path == 1:
                 break
             else:
                 continue
 
     stdscr.refresh()
+
+
+def existing_file_menu(stdscr):
+    h, w = stdscr.getmaxyx()
+    x_file = w // 2 - 10
+    y_file = h // 2 - 2
+    echo()
+    while True:
+        stdscr.clear()
+        stdscr.addstr(y_file, x_file, "Enter a relative file path(including the name of the file):")
+        existing_file = stdscr.getstr(y_file + 1, x_file).decode("utf-8")
+        if existing_file == '':
+            stdscr.addstr(y_file + 2, x_file, "You didn't enter the file path!")
+            stdscr.refresh()
+            time.sleep(1)
+            stdscr.clear()
+            continue
+        else:
+            if os.path.isfile(existing_file):
+                stdscr.clear()
+                stdscr.addstr(y_file, x_file, "Enter a description key:")
+                stdscr.refresh()
+                description_key = stdscr.getstr(y_file + 1, x_file).decode("utf-8")
+                break
+            else:
+                stdscr.addstr(y_file + 2, x_file, "Path is not found!")
+                stdscr.refresh()
+                time.sleep(1)
+                stdscr.clear()
+                continue
 
 
 # The main function in which all the work of the program
@@ -96,10 +126,7 @@ def mainfunc(stdscr):
             current_row_idx += 1
         elif key in [10, 13]:
             if parts_of_start_menu[current_row_idx] == "Existing storage file":
-                stdscr.clear()
-                stdscr.addstr("Enter a file name and a decryption key")
-                stdscr.refresh()
-                stdscr.getch()
+                existing_file_menu(stdscr)
             elif parts_of_start_menu[current_row_idx] == "New storage file":
                 new_file_menu(stdscr)
             elif parts_of_start_menu[current_row_idx] == "Exit":
