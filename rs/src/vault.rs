@@ -1,10 +1,7 @@
-use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Argon2,
-};
-use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
-use crate::crypt;
+use openssl::{pkey::Private, rsa::{Padding, Rsa}};
 use crate::auth;
+use std::str;
+use crate::Result;
 
 pub struct Vault {
     password_hash: String,
@@ -12,63 +9,54 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub fn new(password: String) -> Self {
-        Self {
+    pub fn new(password: String) -> Result<Self> {
+        Ok(Self {
             password_hash: auth::password_hash(password),
-            data: VaultData::new(),
-        }
+            data: VaultData::new()?,
+        })
     }
 
-    pub fn decrypt(&self, password: String) -> Vec<u8> {
+    pub fn decrypt(&self, password: String) -> Result<String> {
         if auth::password_verify(password, self.password_hash.clone()) {
-            self.data.decrypt()
+            Ok(str::from_utf8(self.data.decrypt()?.as_ref())?.to_string())
         } else {
-            Vec::new()
+            Err(auth::PasswordsMismatchError.into())
         }
     }
 
-    pub fn encrypt(&mut self, password: String, data: Vec<u8>) {
+    pub fn encrypt(&mut self, password: String, data: Vec<u8>) -> Result<()> {
         if auth::password_verify(password, self.password_hash.clone()) {
-            self.data.encrypt(data);
+            self.data.encrypt(data)?;
+            Ok(())
+        } else {
+            Err(auth::PasswordsMismatchError.into())
         }
     }
 }
 
 pub struct VaultData {
     data: Vec<u8>,
-    private_key: RSAPrivateKey,
-    public_key: Option<RSAPublicKey>,
+    private_key: Rsa<Private>,
 }
 
 impl VaultData {
-    fn new() -> Self {
-        Self {
+    fn new() -> Result<Self> {
+        Ok(Self {
             data: Vec::new(),
-            private_key: crypt::private_key_gen().unwrap(),
-            public_key: None,
-        }
+            private_key: Rsa::generate(2048)?,
+        })
     }
 
-    fn encrypt(&mut self, data: Vec<u8>) {
-        self.data = crypt::encrypt(self.public_key(), data.as_ref()).unwrap();
+    fn encrypt(&mut self, data: Vec<u8>) -> Result<()> {
+        let mut buf = vec![0; self.private_key.size() as usize];
+        self.private_key.public_encrypt(data.as_ref(), &mut buf, Padding::PKCS1)?;
+        self.data = buf.to_vec();
+        Ok(())
     }
 
-    fn decrypt(&self) -> Vec<u8> {
-        crypt::decrypt(self.private_key(), self.data.as_ref()).unwrap()
-    }
-
-    fn private_key(&self) -> RSAPrivateKey {
-        self.private_key.clone()
-    }
-
-    fn public_key(&mut self) -> RSAPublicKey {
-        match self.public_key.clone() {
-            Some(key) => key,
-            None => {
-                let key = crypt::public_key_get(&self.private_key);
-                self.public_key = Some(key.clone());
-                key
-            }
-        }
+    fn decrypt(&self) -> Result<Vec<u8>> {
+        let mut buf = vec![0; self.private_key.size() as usize];
+        self.private_key.private_decrypt(self.data.as_ref(), &mut buf, Padding::PKCS1)?;
+        Ok(buf.to_vec())
     }
 }

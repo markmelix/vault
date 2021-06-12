@@ -22,3 +22,17 @@ pub fn password_verify(password: String, hash: String) -> bool {
     let hash = PasswordHash::new(&hash).unwrap();
     argon2.verify_password(password.as_bytes(), &hash).is_ok()
 }
+
+use std::error::Error;
+use std::fmt;
+
+#[derive(Debug)]
+pub struct PasswordsMismatchError;
+
+impl Error for PasswordsMismatchError {}
+
+impl fmt::Display for PasswordsMismatchError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Error: passwords mismatch")
+    }
+}
