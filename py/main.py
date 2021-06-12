@@ -1,9 +1,11 @@
 from curses import *
 import time
 import os
+import sys
 
 parts_of_start_menu = ["Existing storage file", "New storage file", "Exit"]
 parts_of_change_name_menu = ["Leave the path", "Change the path"]
+come_to_start_menu = ["Come to start menu"]
 
 
 # Making start menu
@@ -33,7 +35,7 @@ def new_file_menu(stdscr):
     echo()
     while True:
         stdscr.clear()
-        stdscr.addstr(y_file, x_file, "Enter the relative path of the new file(including name of the file):")
+        stdscr.addstr(y_file, x_file, "Enter the relative path of the new file(including name of the file). If you want to come to start menu enter \"Leave\":")
         new_file = stdscr.getstr(y_file + 1, x_file).decode("utf-8")
         # If the user left a field empty
         if new_file == '':
@@ -42,6 +44,9 @@ def new_file_menu(stdscr):
             time.sleep(1)
             stdscr.clear()
             continue
+        elif new_file == "Leave":
+            mainfunc(stdscr)
+            break
         else:
             stdscr.clear()
             selected_row_idx = 0
@@ -88,7 +93,7 @@ def existing_file_menu(stdscr):
     echo()
     while True:
         stdscr.clear()
-        stdscr.addstr(y_file, x_file, "Enter a relative file path(including the name of the file):")
+        stdscr.addstr(y_file, x_file, "Enter a relative file path(including the name of the file). If you want to come to start menu enter \"Leave\":")
         existing_file = stdscr.getstr(y_file + 1, x_file).decode("utf-8")
         if existing_file == '':
             stdscr.addstr(y_file + 2, x_file, "You didn't enter the file path!")
@@ -96,6 +101,9 @@ def existing_file_menu(stdscr):
             time.sleep(1)
             stdscr.clear()
             continue
+        elif existing_file == "Leave":
+            mainfunc(stdscr)
+            break
         else:
             if os.path.isfile(existing_file):
                 stdscr.clear()
@@ -130,8 +138,7 @@ def mainfunc(stdscr):
             elif parts_of_start_menu[current_row_idx] == "New storage file":
                 new_file_menu(stdscr)
             elif parts_of_start_menu[current_row_idx] == "Exit":
-                break
-    endwin()
+                sys.exit()
 
 
 wrapper(mainfunc)
