@@ -1,5 +1,5 @@
 pub mod vault;
 pub mod auth;
-// mod bindings;
+mod bindings;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
