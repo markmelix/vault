@@ -5,6 +5,7 @@ args = ["build", "--release"]
 [tasks.output-move-release]
 command = "cp"
 args = ["target/release/libvault.so", "../py/vault.so"]
+openssl = "0.10.28"
 
 [tasks.build]
 command = "cargo"
@@ -12,7 +13,7 @@ args = ["build"]
 
 [tasks.output-move]
 command = "cp"
-args = ["target/release/libvault.so", "vault.so"]
+args = ["target/debug/libvault.so", "vault.so"]
 
 [tasks.debug]
 dependencies = ["build", "output-move"]
