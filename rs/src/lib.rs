@@ -1,6 +1,6 @@
 pub mod auth;
-pub mod vault;
 pub mod bindings;
+pub mod vault;
 
 pub use vault::Vault;
 

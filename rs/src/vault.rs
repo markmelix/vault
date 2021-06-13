@@ -1,6 +1,6 @@
 //! Vault system.
 
-use crate::{Result, auth};
+use crate::{auth, Result};
 use openssl::{
     pkey::Private,
     rsa::{Padding, Rsa},
@@ -121,7 +121,7 @@ impl VaultData {
                 private_key.private_decrypt(data.as_ref(), &mut buf, Padding::PKCS1_OAEP)?;
                 Ok(buf.to_vec())
             }
-            None => Ok(Vec::new())
+            None => Ok(Vec::new()),
         }
     }
 }
