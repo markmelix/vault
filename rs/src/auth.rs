@@ -26,6 +26,7 @@ pub fn password_verify(password: String, hash: String) -> bool {
 use std::error::Error;
 use std::fmt;
 
+/// Error returned if password hashes doesn't match.
 #[derive(Debug)]
 pub struct PasswordsMismatchError;
 
