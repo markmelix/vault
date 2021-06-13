@@ -1,8 +1,17 @@
-use openssl::{pkey::Private, rsa::{Padding, Rsa}};
 use crate::auth;
-use std::{fs::File, io::{Read, Write}, path::PathBuf, str};
 use crate::Result;
-use serde::{Serialize, Deserialize};
+use openssl::{
+    pkey::Private,
+    rsa::{Padding, Rsa},
+};
+use serde::{Deserialize, Serialize};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
+    str,
+};
+use std::fs;
 
 #[derive(Serialize, Deserialize)]
 pub struct Vault {
@@ -18,8 +27,9 @@ impl Vault {
         })
     }
 
-    pub fn from<T>(path: T) -> Result<Self>
-        where T: Into<PathBuf>
+    pub fn open<T>(path: T) -> Result<Self>
+    where
+        T: Into<PathBuf>,
     {
         let path = path.into();
         let mut file = File::open(path)?;
@@ -46,28 +56,32 @@ impl Vault {
     }
 
     pub fn save<T>(&self, path: T) -> Result<()>
-        where T: Into<PathBuf>
+    where
+        T: Into<PathBuf>,
     {
         let path = path.into();
         let mut file = match path.exists() {
-            true => File::open(path)?,
+            true => {
+                fs::remove_file(&path)?;
+                File::create(path)?
+            },
             false => File::create(path)?,
         };
-        file.write_all(bincode::serialize(self)?.as_ref());
+        file.write_all(bincode::serialize(self)?.as_ref())?;
         Ok(())
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct VaultData {
-    pub data: Vec<u8>,
+    pub data: Option<Vec<u8>>,
     pub private_key: Vec<u8>,
 }
 
 impl VaultData {
     fn new() -> Result<Self> {
         Ok(Self {
-            data: Vec::new(),
+            data: None,
             private_key: Rsa::generate(2048)?.private_key_to_pem()?,
         })
     }
@@ -78,16 +92,21 @@ impl VaultData {
 
     fn encrypt(&mut self, data: Vec<u8>) -> Result<()> {
         let private_key = self.private_key()?;
-        let mut buf = vec![0; private_key.size() as usize];
-        private_key.public_encrypt(data.as_ref(), &mut buf, Padding::PKCS1)?;
-        self.data = buf.to_vec();
+        let mut buf = vec![' ' as u8; private_key.size() as usize];
+        private_key.public_encrypt(data.as_ref(), &mut buf, Padding::PKCS1_OAEP)?;
+        self.data = Some(buf.to_vec());
         Ok(())
     }
 
     fn decrypt(&self) -> Result<Vec<u8>> {
-        let private_key = self.private_key()?;
-        let mut buf = vec![0; private_key.size() as usize];
-        private_key.private_decrypt(self.data.as_ref(), &mut buf, Padding::PKCS1)?;
-        Ok(buf.to_vec())
+        match self.data.as_ref() {
+            Some(data) => {
+                let private_key = self.private_key()?;
+                let mut buf = vec![' ' as u8; private_key.size() as usize];
+                private_key.private_decrypt(data.as_ref(), &mut buf, Padding::PKCS1_OAEP)?;
+                Ok(buf.to_vec())
+            }
+            None => Ok(Vec::new())
+        }
     }
 }
