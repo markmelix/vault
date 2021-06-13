@@ -22,9 +22,9 @@ impl Vault {
         where T: Into<PathBuf>
     {
         let path = path.into();
-        let file = File::open(path)?;
+        let mut file = File::open(path)?;
         let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes);
+        file.read_to_end(&mut bytes)?;
         Ok(bincode::deserialize(bytes.as_ref())?)
     }
 
