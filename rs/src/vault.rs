@@ -72,7 +72,7 @@ impl Vault {
         T: Into<PathBuf>,
     {
         let path = path.into();
-        if !path.exists() {
+        if path.exists() {
             fs::remove_file(&path)?;
         }
         let mut file = File::create(path)?;
