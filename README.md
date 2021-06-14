@@ -11,14 +11,14 @@ Before you can use bindings in Python you need to compile `vault.so` library. Go
 See simple example which explains everything you need to know:
 ```python
 from vault import Vault
-import vault
+import vault as vlt
 
 # bytes_to_bits function just converts specified bytes amount to the bits one.
 # In this example we are converting 1024 bytes to the bits.
 # There is also mb_to_bits functions.
 # It's highly recommended to use powers of 2 as value for these functions
 # E. g. 512, 1024, 2048 etc.
-vault_size = vault.bytes_to_bits(1024)
+vault_size = vlt.bytes_to_bits(1024)
 
 vault_password = 'my-difficult-vault-password123'
 
