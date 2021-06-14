@@ -1,74 +1,153 @@
-use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Argon2,
-};
-use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
-use crate::crypt;
-use crate::auth;
+//! Vault system.
 
+use crate::{auth, Result};
+use openssl::{
+    pkey::Private,
+    rsa::{Padding, Rsa},
+};
+use serde::{Deserialize, Serialize};
+use std::{
+    fs::{self, File},
+    io::{Read, Write},
+    path::PathBuf,
+    str,
+};
+
+/// This structure provides all needed methods to interact with vaults.
+#[derive(Serialize, Deserialize)]
 pub struct Vault {
+    /// Password hash of the vault used for vault decryption.
     password_hash: String,
+
+    /// Data stored inside the vault.
     data: VaultData,
 }
 
 impl Vault {
-    pub fn new(password: String) -> Self {
-        Self {
+    /// Return new Vault instance with provided password and size in bits.
+    pub fn new(password: String, size: u32) -> Result<Self> {
+        Ok(Self {
             password_hash: auth::password_hash(password),
-            data: VaultData::new(),
-        }
+            data: VaultData::new(size)?,
+        })
     }
 
-    pub fn decrypt(&self, password: String) -> Vec<u8> {
+    /// Open file using provided path and deserialize Vault instance from that file.
+    pub fn open<T>(path: T) -> Result<Self>
+    where
+        T: Into<PathBuf>,
+    {
+        let path = path.into();
+        let mut file = File::open(path)?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;
+        Ok(bincode::deserialize(bytes.as_ref())?)
+    }
+
+    /// Decrypt data stored in vault.
+    /// Returns empty string if data was never encrypted.
+    pub fn decrypt(&self, password: String) -> Result<String> {
         if auth::password_verify(password, self.password_hash.clone()) {
-            self.data.decrypt()
+            Ok(str::from_utf8(self.data.decrypt()?.as_ref())?.to_string())
         } else {
-            Vec::new()
+            Err(auth::PasswordsMismatchError.into())
         }
     }
 
-    pub fn encrypt(&mut self, password: String, data: Vec<u8>) {
+    /// Encrypt vault using the provided data.
+    /// Return PasswordsMismatchError if password hash mismatches password_hash field of the structure.
+    pub fn encrypt(&mut self, password: String, data: String) -> Result<()> {
         if auth::password_verify(password, self.password_hash.clone()) {
-            self.data.encrypt(data);
+            self.data.encrypt(data.as_bytes().to_vec())?;
+            Ok(())
+        } else {
+            Err(auth::PasswordsMismatchError.into())
         }
+    }
+
+    pub fn encrypt_append(&mut self, password: String, data: String) -> Result<()> {
+        self.encrypt(password.clone(), format!("{}{}", self.decrypt(password)?.trim_end(), data))
+    }
+
+    /// Save vault to the specified file.
+    /// If file exists, remove it and create new one.
+    pub fn save<T>(&self, path: T) -> Result<()>
+    where
+        T: Into<PathBuf>,
+    {
+        let path = path.into();
+        if path.exists() {
+            fs::remove_file(&path)?;
+        }
+        let mut file = File::create(path)?;
+        file.write_all(bincode::serialize(self)?.as_ref())?;
+        Ok(())
     }
 }
 
-pub struct VaultData {
-    data: Vec<u8>,
-    private_key: RSAPrivateKey,
-    public_key: Option<RSAPublicKey>,
+/// Data stored inside vault.
+#[derive(Serialize, Deserialize)]
+struct VaultData {
+    data: Option<Vec<u8>>,
+    private_key: Vec<u8>,
 }
 
 impl VaultData {
-    fn new() -> Self {
-        Self {
-            data: Vec::new(),
-            private_key: crypt::private_key_gen().unwrap(),
-            public_key: None,
-        }
+    /// Generate new private key and return new instance of this structure.
+    fn new(size: u32) -> Result<Self> {
+        Ok(Self {
+            data: None,
+            private_key: Rsa::generate(size)?.private_key_to_pem()?,
+        })
     }
 
-    fn encrypt(&mut self, data: Vec<u8>) {
-        self.data = crypt::encrypt(self.public_key(), data.as_ref()).unwrap();
+    /// Return private key.
+    fn private_key(&self) -> Result<Rsa<Private>> {
+        Ok(Rsa::private_key_from_pem(self.private_key.as_ref())?)
     }
 
-    fn decrypt(&self) -> Vec<u8> {
-        crypt::decrypt(self.private_key(), self.data.as_ref()).unwrap()
+    /// Encrypt the provided data using the public key.
+    fn encrypt(&mut self, data: Vec<u8>) -> Result<()> {
+        let private_key = self.private_key()?;
+        let mut buf = vec![' ' as u8; private_key.size() as usize];
+        private_key.public_encrypt(data.as_ref(), &mut buf, Padding::PKCS1_OAEP)?;
+        self.data = Some(buf.to_vec());
+        Ok(())
     }
 
-    fn private_key(&self) -> RSAPrivateKey {
-        self.private_key.clone()
-    }
-
-    fn public_key(&mut self) -> RSAPublicKey {
-        match self.public_key.clone() {
-            Some(key) => key,
-            None => {
-                let key = crypt::public_key_get(&self.private_key);
-                self.public_key = Some(key.clone());
-                key
+    /// Decrypt the encrypted data stored in the structure using the private key.
+    /// If there's no decrypted data stored, return empty bytes vector.
+    fn decrypt(&self) -> Result<Vec<u8>> {
+        match self.data.as_ref() {
+            Some(data) => {
+                let private_key = self.private_key()?;
+                let mut buf = vec![' ' as u8; private_key.size() as usize];
+                private_key.private_decrypt(data.as_ref(), &mut buf, Padding::PKCS1_OAEP)?;
+                Ok(buf.to_vec())
             }
+            None => Ok(Vec::new()),
         }
+    }
+}
+
+pub fn bytes_to_bits(amount: u32) -> u32 {
+    amount * 8
+}
+
+pub fn mb_to_bits(amount: u32) -> u32 {
+    amount * 8000000
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vault() -> Result<()> {
+        let vault_password = String::from("");
+        let vault_size = bytes_to_bits(1024);
+        let _vault = Vault::new(vault_password, vault_size)?;
+
+        Ok(())
     }
 }

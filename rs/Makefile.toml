@@ -1,3 +1,11 @@
+[tasks.doc-build]
+command = "cargo"
+args = ["doc"]
+
+[tasks.doc-open]
+command = "cargo"
+args = ["doc", "--open"]
+
 [tasks.build-release]
 command = "cargo"
 args = ["build", "--release"]
@@ -16,7 +24,7 @@ command = "cp"
 args = ["target/debug/libvault.so", "vault.so"]
 
 [tasks.debug]
-dependencies = ["build", "output-move"]
+dependencies = ["build", "doc-build", "output-move"]
 
 [tasks.release]
 dependencies = ["build-release", "output-move-release"]
