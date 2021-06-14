@@ -1,7 +1,7 @@
 //! Python bindings.
 
-use crate::vault::Vault as _Vault;
-use cpython::{py_class, py_module_initializer, exc, PyNone, PyErr, PyResult};
+use crate::vault::{self, Vault as _Vault};
+use cpython::{py_class, py_fn, py_module_initializer, exc, Python, PyNone, PyErr, PyResult};
 use std::cell::RefCell;
 
 py_module_initializer!(vault, |py, m| {
@@ -11,14 +11,16 @@ py_module_initializer!(vault, |py, m| {
         "backend of the vault project written in pure Rust.",
     )?;
     m.add_class::<Vault>(py)?;
+    m.add(py, "bytes_to_bits", py_fn!(py, bytes_to_bits(amount: u32)))?;
+    m.add(py, "mb_to_bits", py_fn!(py, mb_to_bits(amount: u32)))?;
     Ok(())
 });
 
 py_class!(class Vault |py| {
     data instance: RefCell<_Vault>;
-    def __new__(_cls, password: String) -> PyResult<Self> {
+    def __new__(_cls, password: String, size: u32) -> PyResult<Self> {
         let instance = RefCell::new(
-            match _Vault::new(password) {
+            match _Vault::new(password, size) {
                 Ok(vault) => vault,
                 Err(e) => return Err(PyErr::new::<exc::OSError, _>(py, e.to_string())),
             }
@@ -40,7 +42,13 @@ py_class!(class Vault |py| {
         })
     }
     def encrypt(&self, password: String, data: String) -> PyResult<PyNone> {
-        if let Err(e) = self.instance(py).borrow_mut().encrypt(password, data.as_bytes().to_vec()) {
+        if let Err(e) = self.instance(py).borrow_mut().encrypt(password, data) {
+            return Err(PyErr::new::<exc::OSError, _>(py, e.to_string()))
+        }
+        Ok(PyNone)
+    }
+    def encrypt_append(&self, password: String, data: String) -> PyResult<PyNone> {
+        if let Err(e) = self.instance(py).borrow_mut().encrypt_append(password, data) {
             return Err(PyErr::new::<exc::OSError, _>(py, e.to_string()))
         }
         Ok(PyNone)
@@ -52,3 +60,11 @@ py_class!(class Vault |py| {
         Ok(PyNone)
     }
 });
+
+fn bytes_to_bits(_: Python, amount: u32) -> PyResult<u32> {
+    Ok(vault::bytes_to_bits(amount))
+}
+
+fn mb_to_bits(_: Python, amount: u32) -> PyResult<u32> {
+    Ok(vault::mb_to_bits(amount))
+}

@@ -24,11 +24,11 @@ pub struct Vault {
 }
 
 impl Vault {
-    /// Return new Vault instance.
-    pub fn new(password: String) -> Result<Self> {
+    /// Return new Vault instance with provided password and size in bits.
+    pub fn new(password: String, size: u32) -> Result<Self> {
         Ok(Self {
             password_hash: auth::password_hash(password),
-            data: VaultData::new()?,
+            data: VaultData::new(size)?,
         })
     }
 
@@ -56,13 +56,17 @@ impl Vault {
 
     /// Encrypt vault using the provided data.
     /// Return PasswordsMismatchError if password hash mismatches password_hash field of the structure.
-    pub fn encrypt(&mut self, password: String, data: Vec<u8>) -> Result<()> {
+    pub fn encrypt(&mut self, password: String, data: String) -> Result<()> {
         if auth::password_verify(password, self.password_hash.clone()) {
-            self.data.encrypt(data)?;
+            self.data.encrypt(data.as_bytes().to_vec())?;
             Ok(())
         } else {
             Err(auth::PasswordsMismatchError.into())
         }
+    }
+
+    pub fn encrypt_append(&mut self, password: String, data: String) -> Result<()> {
+        self.encrypt(password.clone(), format!("{}{}", self.decrypt(password)?.trim_end(), data))
     }
 
     /// Save vault to the specified file.
@@ -90,10 +94,10 @@ struct VaultData {
 
 impl VaultData {
     /// Generate new private key and return new instance of this structure.
-    fn new() -> Result<Self> {
+    fn new(size: u32) -> Result<Self> {
         Ok(Self {
             data: None,
-            private_key: Rsa::generate(2048)?.private_key_to_pem()?,
+            private_key: Rsa::generate(size)?.private_key_to_pem()?,
         })
     }
 
@@ -123,5 +127,27 @@ impl VaultData {
             }
             None => Ok(Vec::new()),
         }
+    }
+}
+
+pub fn bytes_to_bits(amount: u32) -> u32 {
+    amount * 8
+}
+
+pub fn mb_to_bits(amount: u32) -> u32 {
+    amount * 8000000
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vault() -> Result<()> {
+        let vault_password = String::from("");
+        let vault_size = bytes_to_bits(1024);
+        let _vault = Vault::new(vault_password, vault_size)?;
+
+        Ok(())
     }
 }
