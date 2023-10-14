@@ -40,12 +40,12 @@ vault.encrypt(vault_password, 'My super important secrets: ...')
 # Encrypt data to be stored in Vault not overwritting prevous data.
 vault.encrypt_append(vault_password, '\nJust useless data.')
 
+# Save Vault to the file.
+# It's recommended to use this method after every encryption method.
+vault.save(vault_path)
+
 # Decrypt data stored in Vault.
 # This will return something like that:
 # 'My super important secrets: ...\nJust useless data.'
 vault.decrypt(vault_password)
-
-# Save Vault to the file.
-# It's recommended to use this method after every encryption method.
-vault.save(vault_path)
 ```
