@@ -1,17 +1,21 @@
 //! Vault system.
 
 use crate::{auth, Result};
-use openssl::{
-    pkey::Private,
-    rsa::{Padding, Rsa},
-};
+use argon2::password_hash::SaltString;
+use bincode_aes::BincodeCryptor;
+use pbkdf2::pbkdf2_hmac;
+use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
+use sha2::Sha512;
 use std::{
+    cell::RefCell,
     fs::{self, File},
     io::{Read, Write},
     path::PathBuf,
     str,
 };
+
+const PBKDF2_ITERATIONS: u32 = 210000;
 
 /// This structure provides all needed methods to interact with vaults.
 #[derive(Serialize, Deserialize)]
@@ -19,16 +23,20 @@ pub struct Vault {
     /// Password hash of the vault used for vault decryption.
     password_hash: String,
 
+    /// Salt for key generation.
+    salt: Vec<u8>,
+
     /// Data stored inside the vault.
-    data: VaultData,
+    data: RefCell<Vec<u8>>,
 }
 
 impl Vault {
     /// Return new Vault instance with provided password and size in bits.
-    pub fn new(password: String, size: u32) -> Result<Self> {
+    pub fn new(password: String, size: usize) -> Result<Self> {
         Ok(Self {
             password_hash: auth::password_hash(password),
-            data: VaultData::new(size)?,
+            salt: SaltString::generate(&mut OsRng).as_bytes().to_vec(),
+            data: RefCell::new(Vec::with_capacity(size)),
         })
     }
 
@@ -44,11 +52,18 @@ impl Vault {
         Ok(bincode::deserialize(bytes.as_ref())?)
     }
 
+    fn cryptor(&self, password: String) -> BincodeCryptor {
+        let mut key = [0u8; 32];
+        pbkdf2_hmac::<Sha512>(password.as_bytes(), &self.salt, PBKDF2_ITERATIONS, &mut key);
+        bincode_aes::with_key(bincode_aes::create_key(key.to_vec()).unwrap())
+    }
+
     /// Decrypt data stored in vault.
     /// Returns empty string if data was never encrypted.
     pub fn decrypt(&self, password: String) -> Result<String> {
-        if auth::password_verify(password, self.password_hash.clone()) {
-            Ok(str::from_utf8(self.data.decrypt()?.as_ref())?.to_string())
+        if auth::password_verify(password.clone(), self.password_hash.clone()) {
+            self.cryptor(password)
+                .deserialize(&mut self.data.borrow_mut())
         } else {
             Err(auth::PasswordsMismatchError.into())
         }
@@ -57,8 +72,8 @@ impl Vault {
     /// Encrypt vault using the provided data.
     /// Return PasswordsMismatchError if password hash mismatches password_hash field of the structure.
     pub fn encrypt(&mut self, password: String, data: String) -> Result<()> {
-        if auth::password_verify(password, self.password_hash.clone()) {
-            self.data.encrypt(data.as_bytes().to_vec())?;
+        if auth::password_verify(password.clone(), self.password_hash.clone()) {
+            self.data.replace(self.cryptor(password).serialize(&data)?);
             Ok(())
         } else {
             Err(auth::PasswordsMismatchError.into())
@@ -88,56 +103,11 @@ impl Vault {
     }
 }
 
-/// Data stored inside vault.
-#[derive(Serialize, Deserialize)]
-struct VaultData {
-    data: Option<Vec<u8>>,
-    private_key: Vec<u8>,
-}
-
-impl VaultData {
-    /// Generate new private key and return new instance of this structure.
-    fn new(size: u32) -> Result<Self> {
-        Ok(Self {
-            data: None,
-            private_key: Rsa::generate(size)?.private_key_to_pem()?,
-        })
-    }
-
-    /// Return private key.
-    fn private_key(&self) -> Result<Rsa<Private>> {
-        Ok(Rsa::private_key_from_pem(self.private_key.as_ref())?)
-    }
-
-    /// Encrypt the provided data using the public key.
-    fn encrypt(&mut self, data: Vec<u8>) -> Result<()> {
-        let private_key = self.private_key()?;
-        let mut buf = vec![' ' as u8; private_key.size() as usize];
-        private_key.public_encrypt(data.as_ref(), &mut buf, Padding::PKCS1_OAEP)?;
-        self.data = Some(buf.to_vec());
-        Ok(())
-    }
-
-    /// Decrypt the encrypted data stored in the structure using the private key.
-    /// If there's no decrypted data stored, return empty bytes vector.
-    fn decrypt(&self) -> Result<Vec<u8>> {
-        match self.data.as_ref() {
-            Some(data) => {
-                let private_key = self.private_key()?;
-                let mut buf = vec![' ' as u8; private_key.size() as usize];
-                private_key.private_decrypt(data.as_ref(), &mut buf, Padding::PKCS1_OAEP)?;
-                Ok(buf.to_vec())
-            }
-            None => Ok(Vec::new()),
-        }
-    }
-}
-
-pub fn bytes_to_bits(amount: u32) -> u32 {
+pub fn bytes_to_bits(amount: usize) -> usize {
     amount * 8
 }
 
-pub fn mb_to_bits(amount: u32) -> u32 {
+pub fn mb_to_bits(amount: usize) -> usize {
     amount * 8000000
 }
 

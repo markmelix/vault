@@ -11,14 +11,18 @@ py_module_initializer!(vault, |py, m| {
         "backend of the vault project written in pure Rust.",
     )?;
     m.add_class::<Vault>(py)?;
-    m.add(py, "bytes_to_bits", py_fn!(py, bytes_to_bits(amount: u32)))?;
-    m.add(py, "mb_to_bits", py_fn!(py, mb_to_bits(amount: u32)))?;
+    m.add(
+        py,
+        "bytes_to_bits",
+        py_fn!(py, bytes_to_bits(amount: usize)),
+    )?;
+    m.add(py, "mb_to_bits", py_fn!(py, mb_to_bits(amount: usize)))?;
     Ok(())
 });
 
 py_class!(class Vault |py| {
     data instance: RefCell<_Vault>;
-    def __new__(_cls, password: String, size: u32) -> PyResult<Self> {
+    def __new__(_cls, password: String, size: usize) -> PyResult<Self> {
         let instance = RefCell::new(
             match _Vault::new(password, size) {
                 Ok(vault) => vault,
@@ -36,7 +40,7 @@ py_class!(class Vault |py| {
                 ))
     }
     def decrypt(&self, password: String) -> PyResult<String> {
-        Ok(match self.instance(py).borrow().decrypt(password) {
+        Ok(match self.instance(py).borrow_mut().decrypt(password) {
             Ok(data) => data,
             Err(e) => return Err(PyErr::new::<exc::OSError, _>(py, e.to_string())),
         })
@@ -61,10 +65,10 @@ py_class!(class Vault |py| {
     }
 });
 
-fn bytes_to_bits(_: Python, amount: u32) -> PyResult<u32> {
+fn bytes_to_bits(_: Python, amount: usize) -> PyResult<usize> {
     Ok(vault::bytes_to_bits(amount))
 }
 
-fn mb_to_bits(_: Python, amount: u32) -> PyResult<u32> {
+fn mb_to_bits(_: Python, amount: usize) -> PyResult<usize> {
     Ok(vault::mb_to_bits(amount))
 }
