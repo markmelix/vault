@@ -12,7 +12,7 @@ args = ["build", "--release"]
 
 [tasks.output-move-release]
 command = "cp"
-args = ["target/release/libvault.so", "../py/vault.so"]
+args = ["target/release/libvault.so", "../tui/vault.so"]
 openssl = "0.10.28"
 
 [tasks.build]

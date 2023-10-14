@@ -1,7 +1,7 @@
 //! Python bindings.
 
 use crate::vault::{self, Vault as _Vault};
-use cpython::{py_class, py_fn, py_module_initializer, exc, Python, PyNone, PyErr, PyResult};
+use cpython::{exc, py_class, py_fn, py_module_initializer, PyErr, PyNone, PyResult, Python};
 use std::cell::RefCell;
 
 py_module_initializer!(vault, |py, m| {

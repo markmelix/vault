@@ -66,7 +66,10 @@ impl Vault {
     }
 
     pub fn encrypt_append(&mut self, password: String, data: String) -> Result<()> {
-        self.encrypt(password.clone(), format!("{}{}", self.decrypt(password)?.trim_end(), data))
+        self.encrypt(
+            password.clone(),
+            format!("{}{}", self.decrypt(password)?.trim_end(), data),
+        )
     }
 
     /// Save vault to the specified file.
