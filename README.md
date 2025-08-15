@@ -1,11 +1,8 @@
-# Vault
-Vault Application written on Rust and Python.
+## Vault
+PDKDF2 and AES Rust implementations wrapped to Python FFI-binded toolkit. TUI frontend provided.
 
-# Application Structure
-Rust part of the application is the backend. Python part is the frontend.
-Rust part contains special Python bindings, so Python part can interact with Vault using Rust safety and speed.
+### Python bindings explanations
 
-# Python bindings explanations
 Before you can use bindings in Python you need to compile `vault.so` library. Go to the rs directory of the repository root and run `cargo make release` command (note that before running this command you should install cargo-make program using `cargo install cargo-make` command). After that go to the py directory of the repository root and you may see `vault.so` file. Next, you can just import vault backend library as in example below.
 
 See simple example which explains everything you need to know:
