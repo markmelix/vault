@@ -46,3 +46,4 @@ vault.save(vault_path)
 # 'My super important secrets: ...\nJust useless data.'
 vault.decrypt(vault_password)
 ```
+
