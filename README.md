@@ -12,16 +12,17 @@ cargo make release  # this will place resulting vault.so at the repository root
 ### Usage
 
 To provide Python bindings vault uses [rust-cpython](https://github.com/dgrunwald/rust-cpython).
+
 The library was tested to work correctly with Python 3.10 - 3.11.
 
 Setup environment having the corresponding Python version with uv:
 ```bash
-uv venv --seed --python 3.12
+uv venv --seed --python 3.11
 source .venv/bin/activate
 python
 ```
 
-Then see the usage example and try it out:
+See an usage example and try it out:
 ```python
 from vault import Vault
 import vault as vlt
