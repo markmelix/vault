@@ -16,7 +16,7 @@ sha2 = "0.10.8"
 bincode_aes = "1.0.1"
 
 [dependencies.serde]
-serde = "1.0"
+version = "1.0"
 features = ["derive"]
 
 [dependencies.rand_core]

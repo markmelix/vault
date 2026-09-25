@@ -1,0 +1,41 @@
+[tasks.build]
+command = "cargo"
+args = ["build"]
+
+[tasks.build-release]
+command = "cargo"
+args = ["build", "--release"]
+
+
+[tasks.output-move-release]
+command = "cp"
+args = ["target/release/libvault.dylib", "vault.dylib"]
+
+[tasks.output-move-release.linux]
+command = "cp"
+args = ["target/release/libvault.so", "vault.so"]
+
+
+[tasks.output-move]
+command = "cp"
+args = ["target/debug/libvault.dylib", "vault.dylib"]
+
+[tasks.output-move.linux]
+command = "cp"
+args = ["target/debug/libvault.so", "vault.so"]
+
+
+[tasks.debug]
+dependencies = ["build", "doc-build", "output-move"]
+
+[tasks.release]
+dependencies = ["build-release", "output-move-release"]
+
+
+[tasks.doc-build]
+command = "cargo"
+args = ["doc"]
+
+[tasks.doc-open]
+command = "cargo"
+args = ["doc", "--open"]

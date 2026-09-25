@@ -1,11 +1,21 @@
 ## Vault
-PDKDF2 and AES Rust implementations wrapped to Python FFI-binded toolkit. TUI frontend provided.
+PDKDF2 and AES Rust implementations wrapped to Python FFI-binded library.
 
-### Python bindings explanations
+### Build
 
-Before you can use bindings in Python you need to compile `vault.so` library. Go to the rs directory of the repository root and run `cargo make release` command (note that before running this command you should install cargo-make program using `cargo install cargo-make` command). After that go to the py directory of the repository root and you may see `vault.so` file. Next, you can just import vault backend library as in example below.
+```bash
+cargo install cargo-make
+cargo make release  # this will place resulting vault.so at the repository root
+```
 
-See simple example which explains everything you need to know:
+### Usage
+
+```bash
+uv venv --seed --python 3.10
+source .venv/bin/activate
+python
+```
+
 ```python
 from vault import Vault
 import vault as vlt
@@ -46,4 +56,3 @@ vault.save(vault_path)
 # 'My super important secrets: ...\nJust useless data.'
 vault.decrypt(vault_password)
 ```
-
