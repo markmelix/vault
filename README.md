@@ -12,7 +12,7 @@ cargo make release  # this will place resulting vault.so at the repository root
 ### Usage
 
 To provide Python bindings vault uses [rust-cpython](https://github.com/dgrunwald/rust-cpython).
-So that it provides support for Python 3.7 - 3.12.
+The library was tested to work correctly with Python 3.10 - 3.11.
 
 Setup environment having the corresponding Python version with uv:
 ```bash
