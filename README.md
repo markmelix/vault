@@ -3,6 +3,7 @@ PDKDF2 and AES Rust implementations wrapped to Python FFI-binded library.
 
 ### Build
 
+Install cargo make to build the library with convenience:
 ```bash
 cargo install cargo-make
 cargo make release  # this will place resulting vault.so at the repository root
@@ -10,12 +11,17 @@ cargo make release  # this will place resulting vault.so at the repository root
 
 ### Usage
 
+To provide Python bindings vault uses [rust-cpython](https://github.com/dgrunwald/rust-cpython).
+So that it provides support for Python 3.7 - 3.12.
+
+Setup environment having the corresponding Python version with uv:
 ```bash
-uv venv --seed --python 3.10
+uv venv --seed --python 3.12
 source .venv/bin/activate
 python
 ```
 
+Then see the usage example and try it out:
 ```python
 from vault import Vault
 import vault as vlt
