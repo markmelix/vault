@@ -7,7 +7,7 @@ use argon2::{
 use rand_core::OsRng;
 
 /// Hash password using Argon2 password hashing function.
-pub fn password_hash(password: String) -> String {
+pub fn password_hash(password: &str) -> String {
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
     argon2
@@ -17,7 +17,7 @@ pub fn password_hash(password: String) -> String {
 }
 
 /// Hash password and check if the hashed password matches hash.
-pub fn password_verify(password: String, hash: String) -> bool {
+pub fn password_verify(password: &str, hash: &str) -> bool {
     let argon2 = Argon2::default();
     let hash = PasswordHash::new(&hash).unwrap();
     argon2.verify_password(password.as_bytes(), &hash).is_ok()

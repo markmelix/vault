@@ -32,7 +32,7 @@ pub struct Vault {
 
 impl Vault {
     /// Return new Vault instance with provided password and size in bits.
-    pub fn new(password: String, size: usize) -> Result<Self> {
+    pub fn new(password: &str, size: usize) -> Result<Self> {
         Ok(Self {
             password_hash: auth::password_hash(password),
             salt: SaltString::generate(&mut OsRng).as_bytes().to_vec(),
@@ -52,7 +52,7 @@ impl Vault {
         Ok(bincode::deserialize(bytes.as_ref())?)
     }
 
-    fn cryptor(&self, password: String) -> BincodeCryptor {
+    fn cryptor(&self, password: &str) -> BincodeCryptor {
         let mut key = [0u8; 32];
         pbkdf2_hmac::<Sha512>(password.as_bytes(), &self.salt, PBKDF2_ITERATIONS, &mut key);
         bincode_aes::with_key(bincode_aes::create_key(key.to_vec()).unwrap())
@@ -60,9 +60,9 @@ impl Vault {
 
     /// Decrypt data stored in vault.
     /// Returns empty string if data was never encrypted.
-    pub fn decrypt(&self, password: String) -> Result<String> {
-        if auth::password_verify(password.clone(), self.password_hash.clone()) {
-            self.cryptor(password)
+    pub fn decrypt(&self, password: &str) -> Result<String> {
+        if auth::password_verify(password, &self.password_hash) {
+            self.cryptor(&password)
                 .deserialize(&mut self.data.borrow_mut())
         } else {
             Err(auth::PasswordsMismatchError.into())
@@ -71,8 +71,8 @@ impl Vault {
 
     /// Encrypt vault using the provided data.
     /// Return PasswordsMismatchError if password hash mismatches password_hash field of the structure.
-    pub fn encrypt(&mut self, password: String, data: String) -> Result<()> {
-        if auth::password_verify(password.clone(), self.password_hash.clone()) {
+    pub fn encrypt(&mut self, password: &str, data: &str) -> Result<()> {
+        if auth::password_verify(&password, &self.password_hash) {
             self.data.replace(self.cryptor(password).serialize(&data)?);
             Ok(())
         } else {
@@ -80,10 +80,10 @@ impl Vault {
         }
     }
 
-    pub fn encrypt_append(&mut self, password: String, data: String) -> Result<()> {
+    pub fn encrypt_append(&mut self, password: &str, data: &str) -> Result<()> {
         self.encrypt(
-            password.clone(),
-            format!("{}{}", self.decrypt(password)?.trim_end(), data),
+            password,
+            &format!("{}{}", self.decrypt(password)?.trim_end(), data),
         )
     }
 
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn vault() -> Result<()> {
-        let vault_password = String::from("");
+        let vault_password = "test";
         let vault_size = bytes_to_bits(1024);
         let _vault = Vault::new(vault_password, vault_size)?;
 

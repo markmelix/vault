@@ -22,7 +22,7 @@ py_module_initializer!(vault, |py, m| {
 
 py_class!(class Vault |py| {
     data instance: RefCell<_Vault>;
-    def __new__(_cls, password: String, size: usize) -> PyResult<Self> {
+    def __new__(_cls, password: &str, size: usize) -> PyResult<Self> {
         let instance = RefCell::new(
             match _Vault::new(password, size) {
                 Ok(vault) => vault,
@@ -39,25 +39,25 @@ py_class!(class Vault |py| {
                 }
                 ))
     }
-    def decrypt(&self, password: String) -> PyResult<String> {
+    def decrypt(&self, password: &str) -> PyResult<String> {
         Ok(match self.instance(py).borrow_mut().decrypt(password) {
             Ok(data) => data,
             Err(e) => return Err(PyErr::new::<exc::OSError, _>(py, e.to_string())),
         })
     }
-    def encrypt(&self, password: String, data: String) -> PyResult<PyNone> {
+    def encrypt(&self, password: &str, data: &str) -> PyResult<PyNone> {
         if let Err(e) = self.instance(py).borrow_mut().encrypt(password, data) {
             return Err(PyErr::new::<exc::OSError, _>(py, e.to_string()))
         }
         Ok(PyNone)
     }
-    def encrypt_append(&self, password: String, data: String) -> PyResult<PyNone> {
+    def encrypt_append(&self, password: &str, data: &str) -> PyResult<PyNone> {
         if let Err(e) = self.instance(py).borrow_mut().encrypt_append(password, data) {
             return Err(PyErr::new::<exc::OSError, _>(py, e.to_string()))
         }
         Ok(PyNone)
     }
-    def save(&self, path: String) -> PyResult<PyNone> {
+    def save(&self, path: &str) -> PyResult<PyNone> {
         if let Err(e) = self.instance(py).borrow().save(path) {
             return Err(PyErr::new::<exc::IOError, _>(py, e.to_string()))
         }
